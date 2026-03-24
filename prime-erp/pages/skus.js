@@ -3,7 +3,7 @@ import Layout from '../components/Layout';
 import { Toast, useToast } from '../components/Toast';
 import { supabase } from '../lib/supabase';
 
-const BLANK = () => ({ name: '', category: '', variant: '', description: '' });
+const BLANK = () => ({ sku_id: '', name: '', category: '', variant: '', description: '' });
 
 export default function SKUsPage() {
   const [skus, setSkus] = useState([]);
@@ -24,7 +24,7 @@ export default function SKUsPage() {
   }
 
   function openForm(s = null) {
-    setForm(s ? { name: s.name, category: s.category || '', variant: s.variant || '', description: s.description || '' } : BLANK());
+    setForm(s ? { sku_id: s.sku_id || '', name: s.name, category: s.category || '', variant: s.variant || '', description: s.description || '' } : BLANK());
     setEditing(s ? s.id : null);
     setShowForm(true);
   }
@@ -35,6 +35,7 @@ export default function SKUsPage() {
     setSaving(true);
     try {
       const payload = {
+        sku_id: form.sku_id.trim() || null,
         name: form.name.trim(),
         category: form.category.trim() || null,
         variant: form.variant.trim() || null,
@@ -62,7 +63,6 @@ export default function SKUsPage() {
     loadSKUs();
   }
 
-  // Group by category for display
   const grouped = skus.reduce((acc, s) => {
     const cat = s.category || 'Uncategorized';
     if (!acc[cat]) acc[cat] = [];
@@ -86,6 +86,10 @@ export default function SKUsPage() {
           <form onSubmit={submit}>
             <div className="form-grid form-grid-2">
               <div className="field">
+                <label>SKU ID</label>
+                <input type="text" value={form.sku_id} onChange={e => setForm(p => ({ ...p, sku_id: e.target.value }))} placeholder="e.g. TRI-KAD-24, SS-TOPE-20" />
+              </div>
+              <div className="field">
                 <label>Product Name *</label>
                 <input type="text" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Triply Honeycomb Kadai" required />
               </div>
@@ -97,7 +101,7 @@ export default function SKUsPage() {
                 <label>Size / Variant</label>
                 <input type="text" value={form.variant} onChange={e => setForm(p => ({ ...p, variant: e.target.value }))} placeholder="e.g. 24 cm, 2.5 L" />
               </div>
-              <div className="field">
+              <div className="field" style={{ gridColumn: '1 / -1' }}>
                 <label>Description</label>
                 <input type="text" value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Optional" />
               </div>
@@ -128,6 +132,7 @@ export default function SKUsPage() {
                 <table>
                   <thead>
                     <tr>
+                      <th>SKU ID</th>
                       <th>Product Name</th>
                       <th>Size / Variant</th>
                       <th>Description</th>
@@ -137,6 +142,12 @@ export default function SKUsPage() {
                   <tbody>
                     {items.map(s => (
                       <tr key={s.id}>
+                        <td>
+                          {s.sku_id
+                            ? <span style={{ fontFamily: 'monospace', fontSize: 12, background: 'var(--bg3)', padding: '2px 7px', borderRadius: 4, color: 'var(--text2)' }}>{s.sku_id}</span>
+                            : <span style={{ color: 'var(--text3)' }}>—</span>
+                          }
+                        </td>
                         <td style={{ fontWeight: 500 }}>{s.name}</td>
                         <td>{s.variant || '—'}</td>
                         <td style={{ color: 'var(--text2)' }}>{s.description || '—'}</td>
