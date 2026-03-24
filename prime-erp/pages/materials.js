@@ -3,7 +3,7 @@ import Layout from '../components/Layout';
 import { Toast, useToast } from '../components/Toast';
 import { supabase } from '../lib/supabase';
 
-const BLANK = () => ({ name: '', unit: '', notes: '' });
+const BLANK = () => ({ material_id: '', name: '', unit: '', notes: '' });
 
 export default function MaterialsPage() {
   const [materials, setMaterials] = useState([]);
@@ -25,8 +25,8 @@ export default function MaterialsPage() {
     setLoading(true);
     const [{ data: mats }, { data: vens }, { data: mvs }] = await Promise.all([
       supabase.from('raw_materials').select('*').order('name'),
-      supabase.from('vendors').select('id, name').order('name'),
-      supabase.from('material_vendors').select('*, vendors(name)'),
+      supabase.from('vendors').select('id, name, vendor_id').order('name'),
+      supabase.from('material_vendors').select('*, vendors(name, vendor_id)'),
     ]);
     setMaterials(mats || []);
     setVendors(vens || []);
@@ -35,7 +35,7 @@ export default function MaterialsPage() {
   }
 
   function openForm(m = null) {
-    setForm(m ? { name: m.name, unit: m.unit, notes: m.notes || '' } : BLANK());
+    setForm(m ? { material_id: m.material_id || '', name: m.name, unit: m.unit, notes: m.notes || '' } : BLANK());
     setEditing(m ? m.id : null);
     setShowForm(true);
   }
@@ -45,7 +45,12 @@ export default function MaterialsPage() {
     if (!form.name.trim() || !form.unit.trim()) return;
     setSaving(true);
     try {
-      const payload = { name: form.name.trim(), unit: form.unit.trim(), notes: form.notes || null };
+      const payload = {
+        material_id: form.material_id.trim() || null,
+        name: form.name.trim(),
+        unit: form.unit.trim(),
+        notes: form.notes || null,
+      };
       if (editing) {
         await supabase.from('raw_materials').update(payload).eq('id', editing);
         showToast('Material updated.');
@@ -105,7 +110,11 @@ export default function MaterialsPage() {
         <div className="card" style={{ marginBottom: 24 }}>
           <div style={{ fontWeight: 600, marginBottom: 16 }}>{editing ? 'Edit Material' : 'New Raw Material'}</div>
           <form onSubmit={submit}>
-            <div className="form-grid form-grid-3">
+            <div className="form-grid form-grid-2">
+              <div className="field">
+                <label>Material ID</label>
+                <input type="text" value={form.material_id} onChange={e => setForm(p => ({ ...p, material_id: e.target.value }))} placeholder="e.g. MAT-001, SS-COIL-304" />
+              </div>
               <div className="field">
                 <label>Material Name *</label>
                 <input type="text" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Stainless Steel Coil" required />
@@ -145,15 +154,16 @@ export default function MaterialsPage() {
             return (
               <div key={m.id} className="accordion-row">
                 <div className="accordion-header" onClick={() => setExpanded(isOpen ? null : m.id)}>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {m.material_id && (
+                      <span style={{ fontFamily: 'monospace', fontSize: 11, background: 'var(--bg3)', padding: '2px 7px', borderRadius: 4, color: 'var(--text3)', flexShrink: 0 }}>{m.material_id}</span>
+                    )}
                     <span style={{ fontWeight: 500 }}>{m.name}</span>
-                    <span style={{ marginLeft: 8, color: 'var(--text3)', fontSize: 12 }}>({m.unit})</span>
-                    {m.notes && <span style={{ marginLeft: 8, color: 'var(--text3)', fontSize: 12 }}>· {m.notes}</span>}
+                    <span style={{ color: 'var(--text3)', fontSize: 12 }}>({m.unit})</span>
+                    {m.notes && <span style={{ color: 'var(--text3)', fontSize: 12 }}>· {m.notes}</span>}
                   </div>
                   {mvs.length > 0
-                    ? <span className="badge">
-                        {mvs.length} vendor{mvs.length !== 1 ? 's' : ''} · from ₹{lowestPrice.toLocaleString('en-IN')} / {m.unit}
-                      </span>
+                    ? <span className="badge">{mvs.length} vendor{mvs.length !== 1 ? 's' : ''} · from ₹{lowestPrice.toLocaleString('en-IN')} / {m.unit}</span>
                     : <span className="badge badge-warn">No vendors linked</span>
                   }
                   <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 8 }}>{isOpen ? '▲' : '▼'}</span>
@@ -173,19 +183,16 @@ export default function MaterialsPage() {
                         <tbody>
                           {mvs.map(mv => (
                             <tr key={mv.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                              <td style={{ padding: '8px 10px' }}>{mv.vendors?.name || 'Unknown'}</td>
+                              <td style={{ padding: '8px 10px' }}>
+                                {mv.vendors?.vendor_id && (
+                                  <span style={{ fontFamily: 'monospace', fontSize: 11, background: 'var(--bg3)', padding: '2px 6px', borderRadius: 4, color: 'var(--text3)', marginRight: 6 }}>{mv.vendors.vendor_id}</span>
+                                )}
+                                {mv.vendors?.name || 'Unknown'}
+                              </td>
                               <td style={{ padding: '8px 10px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                   <span style={{ color: 'var(--text2)' }}>₹</span>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    className="input-sm"
-                                    style={{ width: 100 }}
-                                    defaultValue={mv.price}
-                                    onBlur={e => updateVendorPrice(mv.id, e.target.value)}
-                                  />
+                                  <input type="number" min="0" step="0.01" className="input-sm" style={{ width: 100 }} defaultValue={mv.price} onBlur={e => updateVendorPrice(mv.id, e.target.value)} />
                                 </div>
                               </td>
                               <td style={{ padding: '8px 10px', textAlign: 'right' }}>
@@ -203,7 +210,7 @@ export default function MaterialsPage() {
                           <label>Vendor</label>
                           <select value={vpForm.vendor_id} onChange={e => setVpForm(p => ({ ...p, vendor_id: e.target.value }))}>
                             <option value="">— Select Vendor —</option>
-                            {unlinked.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                            {unlinked.map(v => <option key={v.id} value={v.id}>{v.vendor_id ? `[${v.vendor_id}] ` : ''}{v.name}</option>)}
                           </select>
                         </div>
                         <div className="field" style={{ flex: 1, minWidth: 110, marginBottom: 0 }}>
@@ -214,9 +221,6 @@ export default function MaterialsPage() {
                           <button className="btn btn-primary" onClick={() => addVendorLink(m.id)}>Add</button>
                           <button className="btn btn-secondary" onClick={() => { setShowVpForm(null); setVpForm({ vendor_id: '', price: '' }); }}>Cancel</button>
                         </div>
-                        {unlinked.length === 0 && (
-                          <div style={{ width: '100%', fontSize: 12, color: 'var(--text3)' }}>All vendors are already linked to this material.</div>
-                        )}
                       </div>
                     ) : (
                       <div style={{ display: 'flex', gap: 8 }}>
