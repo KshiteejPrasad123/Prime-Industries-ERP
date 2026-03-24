@@ -4,7 +4,7 @@ import { Toast, useToast } from '../components/Toast';
 import { supabase } from '../lib/supabase';
 
 const BLANK = () => ({
-  name: '', contact_person: '', phone: '', email: '',
+  vendor_id: '', name: '', contact_person: '', phone: '', email: '',
   city: '', payment_terms: '', notes: '', custom_fields: [],
 });
 
@@ -33,6 +33,7 @@ export default function VendorsPage() {
   function openForm(v = null) {
     if (v) {
       setForm({
+        vendor_id: v.vendor_id || '',
         name: v.name, contact_person: v.contact_person || '',
         phone: v.phone || '', email: v.email || '',
         city: v.city || '', payment_terms: v.payment_terms || '',
@@ -70,6 +71,7 @@ export default function VendorsPage() {
     setSaving(true);
     try {
       const payload = {
+        vendor_id: form.vendor_id.trim() || null,
         name: form.name.trim(),
         contact_person: form.contact_person || null,
         phone: form.phone || null,
@@ -126,6 +128,10 @@ export default function VendorsPage() {
           <form onSubmit={submit}>
             <div className="form-grid form-grid-2">
               <div className="field">
+                <label>Vendor ID</label>
+                <input type="text" value={form.vendor_id} onChange={e => set('vendor_id', e.target.value)} placeholder="e.g. VEN-001, RATHI-STL" />
+              </div>
+              <div className="field">
                 <label>Vendor Name *</label>
                 <input type="text" value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Rathi Steel Pvt. Ltd." required />
               </div>
@@ -149,7 +155,7 @@ export default function VendorsPage() {
                 <label>Payment Terms</label>
                 <input type="text" value={form.payment_terms} onChange={e => set('payment_terms', e.target.value)} placeholder="e.g. Net 30, 50% advance" />
               </div>
-              <div className="field" style={{ gridColumn: '1 / -1' }}>
+              <div className="field">
                 <label>Notes / Remarks</label>
                 <input type="text" value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Any additional notes" />
               </div>
@@ -201,32 +207,29 @@ export default function VendorsPage() {
             <table>
               <thead>
                 <tr>
-                  <th>Vendor</th>
+                  <th>Vendor ID</th>
+                  <th>Vendor Name</th>
                   <th>City</th>
                   <th>Contact Person</th>
                   <th>Phone</th>
                   <th>Payment Terms</th>
-                  <th>Custom Fields</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 {vendors.map(v => (
                   <tr key={v.id}>
+                    <td>
+                      {v.vendor_id
+                        ? <span style={{ fontFamily: 'monospace', fontSize: 12, background: 'var(--bg3)', padding: '2px 7px', borderRadius: 4, color: 'var(--text2)' }}>{v.vendor_id}</span>
+                        : <span style={{ color: 'var(--text3)' }}>—</span>
+                      }
+                    </td>
                     <td style={{ fontWeight: 500 }}>{v.name}</td>
                     <td>{v.city || '—'}</td>
                     <td>{v.contact_person || '—'}</td>
                     <td>{v.phone || '—'}</td>
                     <td>{v.payment_terms || '—'}</td>
-                    <td>
-                      {(v.vendor_custom_fields || []).length > 0
-                        ? (v.vendor_custom_fields || []).map(f => (
-                          <span key={f.id} className="vendor-chip" style={{ marginRight: 4 }}>
-                            {f.field_key}: {f.field_value || '—'}
-                          </span>
-                        ))
-                        : '—'}
-                    </td>
                     <td className="actions">
                       <button className="btn btn-ghost btn-sm" onClick={() => openForm(v)}>Edit</button>
                       <button className="btn btn-danger btn-sm" onClick={() => deleteVendor(v.id)}>Delete</button>
